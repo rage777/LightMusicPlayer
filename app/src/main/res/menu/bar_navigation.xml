@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+        <item
+            android:id="@+id/discover"
+            android:title="发现"
+            android:icon="@drawable/discover"
+            android:orderInCategory="0"/>
+        <!--  本来这里是关注页，由于时间原因我决定砍掉      -->
+        <item
+            android:id="@+id/subscribe"
+            android:title="本地音乐"
+            android:icon="@drawable/lib"
+            android:orderInCategory="1"/>
+
+</menu>
