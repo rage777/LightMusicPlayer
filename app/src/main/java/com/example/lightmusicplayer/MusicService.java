@@ -4,8 +4,11 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ContentUris;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
@@ -251,6 +254,8 @@ public class MusicService extends Service implements
         }
     }
 
+    private HeadsetConnectionReceiver headsetReceiver;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -280,6 +285,8 @@ public class MusicService extends Service implements
         mediaPlayer.setOnPreparedListener(this);
         mediaPlayer.setOnErrorListener(this);
 
+
+        registerReceiver(headsetReceiver,new IntentFilter(Intent.ACTION_HEADSET_PLUG));
     }
 
 
@@ -288,6 +295,7 @@ public class MusicService extends Service implements
         super.onDestroy();
         mediaPlayer.release();
         mediaPlayer = null;
+        unregisterReceiver(headsetReceiver);
     }
 
     @Override
@@ -357,6 +365,34 @@ public class MusicService extends Service implements
     @Override
     public IBinder onBind(Intent intent) {
         return binder;
+    }
+
+    public class HeadsetConnectionReceiver extends BroadcastReceiver {
+
+        private static final String TAG = "HeadsetReceiver";
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (Intent.ACTION_HEADSET_PLUG.equals(intent.getAction())) {
+                int state = intent.getIntExtra("state", -1);
+
+                switch (state) {
+                    case 0:
+                        Log.d(TAG, "Headset unplugged");
+                        // 耳机拔出
+                        pause();
+                        break;
+                    case 1:
+                        Log.d(TAG, "Headset plugged in");
+                        // 耳机插入
+                        resume();
+                        break;
+                    default:
+                        Log.d(TAG, "Unknown headset state");
+                        break;
+                }
+            }
+        }
     }
 
 }

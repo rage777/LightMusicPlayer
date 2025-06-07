@@ -12,4 +12,10 @@
             android:icon="@drawable/lib"
             android:orderInCategory="1"/>
 
+        <item
+            android:id="@+id/red"
+            android:title="红歌经典"
+            android:icon="@drawable/list_black"
+            android:orderInCategory="2"/>
+
 </menu>

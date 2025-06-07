@@ -28,6 +28,7 @@ import com.example.lightmusicplayer.common.Page;
 import com.example.lightmusicplayer.databinding.ActivityMainBinding;
 import com.example.lightmusicplayer.page.home.discovery.DiscoverFragment;
 import com.example.lightmusicplayer.page.home.localmusic.LocalDetailFragment;
+import com.example.lightmusicplayer.page.home.redmusic.RedMusicFragment;
 
 public class MainActivity extends AppCompatActivity implements Page {
 
@@ -154,6 +155,7 @@ public class MainActivity extends AppCompatActivity implements Page {
             return switch (position){
                 case 0 -> new DiscoverFragment();
                 case 1 -> new LocalDetailFragment();
+                case 2 -> new RedMusicFragment();
                 default -> new DiscoverFragment();
             };
         }

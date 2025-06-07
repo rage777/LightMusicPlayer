@@ -1,8 +1,7 @@
-package com.example.lightmusicplayer.page.home.localmusic;
+package com.example.lightmusicplayer.page.home.redmusic;
 
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -19,23 +18,30 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.lightmusicplayer.MyApp;
 import com.example.lightmusicplayer.common.BaseAdapter;
 import com.example.lightmusicplayer.common.GsonSingleton;
 import com.example.lightmusicplayer.common.Page;
+import com.example.lightmusicplayer.data.net.ApiServiceSingleton;
 import com.example.lightmusicplayer.databinding.FragmentLocalBinding;
 import com.example.lightmusicplayer.databinding.ItemMusicBinding;
 import com.example.lightmusicplayer.entity.MusicInfo;
+import com.example.lightmusicplayer.entity.response.PlayListDetailResponse;
 import com.example.lightmusicplayer.page.home.MainActivity;
 import com.example.lightmusicplayer.util.ExUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class LocalDetailFragment extends Fragment implements Page {
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+public class RedMusicFragment extends Fragment implements Page {
 
 
-    public static final String TAG = "LocalDetailFragment";
+    public static final String TAG = "RedMusicFragment";
     private FragmentLocalBinding binding;
 
     private InnerAdapter adapter;
@@ -61,49 +67,34 @@ public class LocalDetailFragment extends Fragment implements Page {
 
     @Override
     public void initData(){
-        List<MusicInfo> musicList = new ArrayList<>();
+        ApiServiceSingleton.getApiService().getAlbumDetail(145196957).enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<PlayListDetailResponse> call, Response<PlayListDetailResponse> response) {
 
-        ContentResolver resolver = requireActivity().getContentResolver();
-        Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                List<MusicInfo> infoList = new ArrayList<>();
+                response.body().getPlaylist().getTracks().forEach(track -> {
+                    MusicInfo info = new MusicInfo(
+                            track.getName(),
+                            Arrays.stream(track.getAr())
+                                    .map(PlayListDetailResponse.Playlist.Track.Artist::getName)
+                                    .collect(Collectors.toList()),
+                            track.getAl().getName(),
+                            track.getId(),
+                            false
+                    );
 
-        String[] projection = {
-                MediaStore.Audio.Media._ID,
-                MediaStore.Audio.Media.TITLE,
-                MediaStore.Audio.Media.ARTIST,
-                MediaStore.Audio.Media.DATA,
-                MediaStore.Audio.Media.DURATION
-        };
+                    infoList.add(info);
 
-        Cursor cursor = resolver.query(uri, projection, null, null, null);
 
-        if (cursor != null && cursor.moveToFirst()) {
+                });
+                adapter.submitList(infoList);
+            }
 
-            Log.v(TAG,"条数:"+cursor.getCount());
-            int idIndex = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
-            int titleIndex = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE);
-            int artistIndex = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST);
-            int dataIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATA);
-            int durationIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DURATION);
+            @Override
+            public void onFailure(Call<PlayListDetailResponse> call, Throwable t) {
 
-            do {
-                String title = cursor.getString(titleIndex);
-                String artist = cursor.getString(artistIndex);
-                String path = cursor.getString(dataIndex);
-                long duration = cursor.getLong(durationIndex);
-                long id = cursor.getLong(idIndex);
-
-                List<String> arList = new ArrayList<>();
-                arList.add(artist);
-                musicList.add(new MusicInfo(title, arList, "本地音乐",id,true));
-            } while (cursor.moveToNext());
-
-            cursor.close();
-
-        } else {
-            Log.v(TAG,"null!!");
-        }
-
-        adapter.submitList(musicList);
+            }
+        });
     }
 
     @Override
