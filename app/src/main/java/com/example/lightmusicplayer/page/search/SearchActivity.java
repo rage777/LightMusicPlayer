@@ -49,6 +49,11 @@ public class SearchActivity extends AppCompatActivity implements Page {
     private InnerAdapter adapter;
     private IMusicServiceInterface musicService;
 
+    private static final String SEARCH_HISTORY_KEY = "search_history";
+    private SharedPreferences sharedPreferences;
+    private List<String> searchHistory;
+
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,7 +75,15 @@ public class SearchActivity extends AppCompatActivity implements Page {
     }
 
     @Override
-    public void initData() {}
+    public void initData() {
+        sharedPreferences = getSharedPreferences("search_prefs", Context.MODE_PRIVATE);
+        String historyJson = sharedPreferences.getString(SEARCH_HISTORY_KEY, null);
+        if (historyJson != null) {
+            searchHistory = new Gson().fromJson(historyJson, new TypeToken<List<String>>(){}.getType());
+        } else {
+            searchHistory = new ArrayList<>();
+        }
+    }
 
     @Override
     public void initListener() {
@@ -124,39 +137,58 @@ public class SearchActivity extends AppCompatActivity implements Page {
         manager.hideSoftInputFromWindow(v.getWindowToken(),0);
     }
 
-    private void search(String s){
-        ApiServiceSingleton.getApiService().search(s).enqueue(new Callback<>() {
-            @Override
-            public void onResponse(@NonNull Call<SearchResponse> call, @NonNull Response<SearchResponse> response) {
-                List<MusicInfo> item = new ArrayList<>();
+    private void search(String s) {
+        if (!s.trim().isEmpty()) {
+            // 添加到历史记录顶部（或去重后添加）
+            if (!searchHistory.contains(s)) {
+                searchHistory.add(0, s);
 
-                response.body().getResult().getSongs().forEach(song -> {
+                // 限制最多保存 10 条记录
+                if (searchHistory.size() > 10) {
+                    searchHistory.remove(searchHistory.size() - 1);
+                }
 
-                    List<String> arList = song.getArtists()
-                            .stream()
-                            .map(SearchResponse.Songs.Song.Artist::getName)
-                            .collect(Collectors.toList());
-
-                    MusicInfo musicInfo = new MusicInfo(
-                            song.getName(),
-                            arList,
-                            song.getAlbum().getName(),
-                            song.getId(),
-                            false
-                    );
-
-                    item.add(musicInfo);
-                });
-
-                adapter.submitList(item);
-
+                // 保存到 SharedPreferences
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.putString(SEARCH_HISTORY_KEY, new Gson().toJson(searchHistory));
+                editor.apply();
             }
 
-            @Override
-            public void onFailure(@NonNull Call<SearchResponse> call, @NonNull Throwable t) {
-                Log.e(TAG,"fail",t);
-            }
-        });
+            // 发起网络请求
+            ApiServiceSingleton.getApiService().search(s).enqueue(new Callback<SearchResponse>() {
+                @Override
+                public void onResponse(@NonNull Call<SearchResponse> call, @NonNull Response<SearchResponse> response) {
+                    List<MusicInfo> item = new ArrayList<>();
+
+                    if (response.body() != null && response.body().getResult() != null && response.body().getResult().getSongs() != null) {
+                        response.body().getResult().getSongs().forEach(song -> {
+
+                            List<String> arList = song.getArtists()
+                                    .stream()
+                                    .map(SearchResponse.Songs.Song.Artist::getName)
+                                    .collect(Collectors.toList());
+
+                            MusicInfo musicInfo = new MusicInfo(
+                                    song.getName(),
+                                    arList,
+                                    song.getAlbum().getName(),
+                                    song.getId(),
+                                    false
+                            );
+
+                            item.add(musicInfo);
+                        });
+                    }
+
+                    adapter.submitList(item);
+                }
+
+                @Override
+                public void onFailure(@NonNull Call<SearchResponse> call, @NonNull Throwable t) {
+                    Log.e(TAG,"fail",t);
+                }
+            });
+        }
     }
 
     @Override
