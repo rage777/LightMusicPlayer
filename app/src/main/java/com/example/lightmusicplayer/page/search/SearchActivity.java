@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -13,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,15 +25,19 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.lightmusicplayer.IMusicServiceInterface;
 import com.example.lightmusicplayer.MusicService;
+import com.example.lightmusicplayer.R;
 import com.example.lightmusicplayer.common.BaseAdapter;
 import com.example.lightmusicplayer.common.GsonSingleton;
 import com.example.lightmusicplayer.common.Page;
 import com.example.lightmusicplayer.data.net.ApiServiceSingleton;
 import com.example.lightmusicplayer.databinding.ActivitySearchBinding;
 import com.example.lightmusicplayer.databinding.ItemMusicBinding;
+import com.example.lightmusicplayer.databinding.ItemSearchHistoryBinding;
 import com.example.lightmusicplayer.entity.MusicInfo;
 import com.example.lightmusicplayer.entity.response.SearchResponse;
 import com.example.lightmusicplayer.util.ExUtil;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,12 +53,12 @@ public class SearchActivity extends AppCompatActivity implements Page {
 
     private ActivitySearchBinding binding;
     private InnerAdapter adapter;
+    private HistoryAdapter historyAdapter;
     private IMusicServiceInterface musicService;
 
     private static final String SEARCH_HISTORY_KEY = "search_history";
     private SharedPreferences sharedPreferences;
     private List<String> searchHistory;
-
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -67,11 +73,18 @@ public class SearchActivity extends AppCompatActivity implements Page {
     public void initView(){
         binding = ActivitySearchBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        
         // 搜索结果展示
         RecyclerView rv = binding.list;
         rv.setLayoutManager(new LinearLayoutManager(this));
         adapter = new InnerAdapter();
         rv.setAdapter(adapter);
+
+        // 搜索历史展示
+        RecyclerView historyRv = binding.historyList;
+        historyRv.setLayoutManager(new LinearLayoutManager(this));
+        historyAdapter = new HistoryAdapter();
+        historyRv.setAdapter(historyAdapter);
     }
 
     @Override
@@ -83,11 +96,20 @@ public class SearchActivity extends AppCompatActivity implements Page {
         } else {
             searchHistory = new ArrayList<>();
         }
+        updateHistoryView();
+    }
+
+    private void updateHistoryView() {
+        if (searchHistory.isEmpty()) {
+            binding.historyContainer.setVisibility(View.GONE);
+        } else {
+            binding.historyContainer.setVisibility(View.VISIBLE);
+            historyAdapter.submitList(new ArrayList<>(searchHistory));
+        }
     }
 
     @Override
     public void initListener() {
-
         binding.btnSearch.setOnClickListener(v -> {
             search(binding.et.getEditableText().toString());
         });
@@ -111,6 +133,13 @@ public class SearchActivity extends AppCompatActivity implements Page {
             }
             return false;
         });
+
+        // 清除历史记录按钮
+        binding.clearHistory.setOnClickListener(v -> {
+            searchHistory.clear();
+            sharedPreferences.edit().remove(SEARCH_HISTORY_KEY).apply();
+            updateHistoryView();
+        });
     }
 
     public void bindService(){
@@ -119,15 +148,12 @@ public class SearchActivity extends AppCompatActivity implements Page {
         bindService(intent, new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
-
                 musicService = IMusicServiceInterface.Stub.asInterface(service);
                 binding.playerControllerView.bindToService(musicService);
-
             }
 
             @Override
             public void onServiceDisconnected(ComponentName name) {
-
             }
         }, Context.BIND_AUTO_CREATE);
     }
@@ -152,6 +178,8 @@ public class SearchActivity extends AppCompatActivity implements Page {
                 SharedPreferences.Editor editor = sharedPreferences.edit();
                 editor.putString(SEARCH_HISTORY_KEY, new Gson().toJson(searchHistory));
                 editor.apply();
+                
+                updateHistoryView();
             }
 
             // 发起网络请求
@@ -162,7 +190,6 @@ public class SearchActivity extends AppCompatActivity implements Page {
 
                     if (response.body() != null && response.body().getResult() != null && response.body().getResult().getSongs() != null) {
                         response.body().getResult().getSongs().forEach(song -> {
-
                             List<String> arList = song.getArtists()
                                     .stream()
                                     .map(SearchResponse.Songs.Song.Artist::getName)
@@ -181,6 +208,7 @@ public class SearchActivity extends AppCompatActivity implements Page {
                     }
 
                     adapter.submitList(item);
+                    binding.historyContainer.setVisibility(View.GONE);
                 }
 
                 @Override
@@ -205,6 +233,30 @@ public class SearchActivity extends AppCompatActivity implements Page {
         }
     }
 
+    private static class HistoryHolder extends RecyclerView.ViewHolder {
+        public ItemSearchHistoryBinding binding;
+        public HistoryHolder(ItemSearchHistoryBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+        }
+    }
+
+    private class HistoryAdapter extends BaseAdapter<String, HistoryHolder> {
+        @Override
+        public HistoryHolder onCreateViewHolder(ViewGroup parent, int viewType, Context context, LayoutInflater inflater) {
+            return new HistoryHolder(ItemSearchHistoryBinding.inflate(inflater, parent, false));
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull HistoryHolder holder, int position, String history) {
+            holder.binding.historyText.setText(history);
+            holder.binding.historyText.setOnClickListener(v -> {
+                binding.et.setText(history);
+                search(history);
+            });
+        }
+    }
+
     private static class InnerAdapter extends BaseAdapter<MusicInfo,ItemHolder>{
         @Override
         public ItemHolder onCreateViewHolder(ViewGroup parent,
@@ -226,7 +278,5 @@ public class SearchActivity extends AppCompatActivity implements Page {
             s+=arStr.substring(1,arStr.length()-1);
             holder.binding.name.setText(s);
         }
-
     }
-
 }
