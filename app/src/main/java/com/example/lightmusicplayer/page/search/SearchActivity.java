@@ -82,7 +82,7 @@ public class SearchActivity extends AppCompatActivity implements Page {
 
         // 搜索历史展示
         RecyclerView historyRv = binding.historyList;
-        historyRv.setLayoutManager(new LinearLayoutManager(this));
+        historyRv.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.HORIZONTAL,false));
         historyAdapter = new HistoryAdapter();
         historyRv.setAdapter(historyAdapter);
     }
@@ -100,12 +100,7 @@ public class SearchActivity extends AppCompatActivity implements Page {
     }
 
     private void updateHistoryView() {
-        if (searchHistory.isEmpty()) {
-            binding.historyContainer.setVisibility(View.GONE);
-        } else {
-            binding.historyContainer.setVisibility(View.VISIBLE);
-            historyAdapter.submitList(new ArrayList<>(searchHistory));
-        }
+        historyAdapter.submitList(new ArrayList<>(searchHistory));
     }
 
     @Override
@@ -139,6 +134,10 @@ public class SearchActivity extends AppCompatActivity implements Page {
             searchHistory.clear();
             sharedPreferences.edit().remove(SEARCH_HISTORY_KEY).apply();
             updateHistoryView();
+        });
+
+        historyAdapter.setOnItemClickListener((v, index) -> {
+            search(binding.et.getEditableText().toString());
         });
     }
 
@@ -208,7 +207,6 @@ public class SearchActivity extends AppCompatActivity implements Page {
                     }
 
                     adapter.submitList(item);
-                    binding.historyContainer.setVisibility(View.GONE);
                 }
 
                 @Override
