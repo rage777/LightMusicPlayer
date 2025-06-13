@@ -29,6 +29,7 @@ import com.example.lightmusicplayer.entity.MusicInfo;
 import com.example.lightmusicplayer.entity.PlayerInfo;
 import com.example.lightmusicplayer.entity.response.SongUrlResp;
 import com.example.lightmusicplayer.util.ExUtil;
+import com.google.gson.reflect.TypeToken;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -328,6 +329,12 @@ public class MusicService extends Service implements
         public void addMusicToListAndPlay(String musicInfoJson) throws RemoteException {
             MusicInfo t = GsonSingleton.getInstance().fromJson(musicInfoJson,MusicInfo.class);
             mainThreadHandler.post(() -> MusicService.this.addMusicToListAndPlay(t));
+        }
+
+        @Override
+        public void loadPlaylistAndPlay(String urlsJson, int playIndex) throws RemoteException {
+            List<MusicInfo> t = GsonSingleton.getInstance().fromJson(urlsJson,new TypeToken<List<MusicInfo>>(){}.getType());
+            mainThreadHandler.post(() -> MusicService.this.loadPlaylistAndPlay(t,playIndex));
         }
 
         @Override

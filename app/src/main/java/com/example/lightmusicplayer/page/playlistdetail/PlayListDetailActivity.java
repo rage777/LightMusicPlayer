@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -118,6 +119,17 @@ public class PlayListDetailActivity extends AppCompatActivity implements Page {
             }
         });
 
+        binding.playall.setOnClickListener(v -> {
+            try {
+                musicService.loadPlaylistAndPlay(
+                        GsonSingleton.getInstance().toJson(adapter.getAllItem()),
+                        0
+                );
+            } catch (RemoteException e) {
+                ExUtil.w(e);
+            }
+
+        });
     }
 
     public void bindService(){

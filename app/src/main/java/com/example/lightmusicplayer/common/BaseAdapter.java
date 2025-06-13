@@ -21,6 +21,8 @@ public abstract class BaseAdapter<ITEM,T extends RecyclerView.ViewHolder> extend
         notifyDataSetChanged();
     }
 
+    public final List<ITEM> getAllItem() { return list; }
+
     public final ITEM getItem(int index){
         return list.get(index);
     }

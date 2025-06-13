@@ -15,6 +15,8 @@ interface IMusicServiceInterface {
 
      void addMusicToListAndPlay(String musicInfoJson);
 
+     void loadPlaylistAndPlay(String urlsJson,int playIndex);
+
      void play(int index);
 
      void pause();
